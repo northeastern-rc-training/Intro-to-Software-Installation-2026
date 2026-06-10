@@ -97,7 +97,7 @@ The fastest install is the one you do not have to do. If `module avail` shows wh
 
 > The exact module names and versions are cluster-specific. The commands below assume Northeastern's Discovery/Explorer environment. Verify current module names with `module avail` before presenting.
 
-[Module Load](images/module_load.png)
+![Module Load](images/module_load.png)
 
 ---
 
