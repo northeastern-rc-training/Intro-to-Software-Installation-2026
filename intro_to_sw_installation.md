@@ -130,8 +130,6 @@ conda config --add channels conda-forge
 conda config --remove channels defaults
 ```
 
-The `mamba` drop-in replacement resolves dependencies much faster than classic Conda and is worth using when available.
-
 ### 3.3 The HPC Pitfalls
 
 This is the part people skip and then file a help ticket about.
@@ -146,12 +144,12 @@ srun --partition=short --cpus-per-task=4 --mem=8G --pty bash
 **Watch your home quota.** Conda environments are tens of thousands of small files and can fill a home quota quickly. Be deliberate about where environments live. Do not put them on scratch: scratch is periodically purged, so environments stored there will disappear, sometimes mid-project. Keep environments in persistent space (home, or a project/work directory with enough quota). The package cache, which is regenerable, is the one piece you can safely redirect to scratch to save quota:
 
 ```bash
-# in ~/.condarc, redirect only the regenerable package cache
+# in ~/.conda, redirect only the regenerable package cache
 pkgs_dirs:
   - /scratch/$USER/conda/pkgs
 ```
 
-If home quota is tight, create environments in a persistent project directory with `conda create -p /path/to/project/envs/myenv` rather than relocating all environments to scratch.
+If home quota is tight, create environments in a persistent project directory with `conda create -p /projects/proj_name/envs/myenv` rather than relocating all environments to scratch.
 
 **Activate inside your job script, not your `.bashrc`.** Auto-activating an environment in `.bashrc` slows every login and can break batch jobs. Activate explicitly in the job:
 
@@ -170,10 +168,6 @@ python my_analysis.py
 conda env export > environment.yml          # exact, includes builds
 conda env create -f environment.yml         # recreate later
 ```
-
-### 3.4 When Conda Is the Wrong Tool
-
-Conda ships generic prebuilt binaries. For code where performance depends on the cluster's MPI or CPU instruction set (large MPI simulations, heavily vectorized numerical code), a Conda binary may run noticeably slower than something built against the cluster libraries. For those cases, look at Spack, EasyBuild, or a source build.
 
 ---
 
@@ -223,12 +217,6 @@ spack install                        # build everything in the environment
 ```
 
 The environment is described by a `spack.yaml` file you can commit to version control and rebuild elsewhere.
-
-### 4.4 Why It Matters on HPC
-
-Spack can reuse the compilers and MPI already on the cluster, so your build links against the same optimized libraries the system provides. This is the main reason it produces faster binaries than a generic download for performance-sensitive code. Many HPC centers, including national labs, use Spack to build the very module stack you load in Section 2.
-
-![Spack](images/spack_dependency_tree.png)
 
 ---
 
@@ -321,8 +309,6 @@ Compiled software is built by a **build system**, and the project's documentatio
 **Autotools (a `configure` script):**
 
 ```bash
-module load gcc                      # load the cluster compiler first
-
 ./configure --prefix=$HOME/software/mytool
 make -j 8                            # compile using 8 cores
 make install                         # install into the prefix
@@ -331,7 +317,7 @@ make install                         # install into the prefix
 **CMake:**
 
 ```bash
-module load gcc cmake
+module load cmake
 
 cmake -B build -DCMAKE_INSTALL_PREFIX=$HOME/software/mytool
 cmake --build build -j 8
@@ -346,7 +332,7 @@ This is what separates an HPC source build from a laptop build.
 
 **Always set a `--prefix`.** You cannot install to `/usr/local`. Point the install at your own directory, commonly something like `$HOME/software/<tool>/<version>`.
 
-**Load the cluster compiler and libraries first.** Loading `gcc`, `cmake`, and any required libraries as modules before you build makes the software link against the cluster's optimized versions. This is the same reason Spack and EasyBuild produce fast binaries.
+**Load the cluster compiler and libraries first.** Loading `cmake` and any required libraries as modules before you build makes the software link against the cluster's optimized versions. This is the same reason Spack and EasyBuild produce fast binaries.
 
 **Link against the cluster MPI and math libraries.** For parallel or numerical software, point the build at the cluster's MPI and BLAS/LAPACK rather than letting it use a slow generic fallback. The exact flags depend on the project, but the principle is constant.
 
@@ -379,21 +365,19 @@ mkdir -p $HOME/modulefiles
 module use $HOME/modulefiles
 ```
 
-**Step 3: write a modulefile.** This cluster uses classic Environment Modules, so modulefiles are written in **Tcl** (Lmod's Lua `.lua` files will not work here). Create `$HOME/modulefiles/mytool/1.0` with:
+**Step 3: write a modulefile.** This cluster uses classic Environment Modules, so modulefiles are written in **Tcl**. Create `$HOME/modulefiles/mytool/1.0` with:
 
 ```tcl
-#%Module1.0
+#%Module
 ## mytool 1.0 personal modulefile
 
-set root $::env(HOME)/software/mytool
-
-prepend-path PATH            $root/bin
-prepend-path LD_LIBRARY_PATH $root/lib
+prepend-path PATH            $HOME/software/mytool/bin
+prepend-path LD_LIBRARY_PATH $HOME/software/mytool/lib
 
 module-whatis "mytool 1.0, personal build"
 ```
 
-The directory name (`mytool`) becomes the module name and the filename (`1.0`) becomes the version. The first line `#%Module1.0` must be present and must be exactly this. It is a marker that identifies the file as a modulefile (the modulefile documentation calls it the "magic cookie," which is just a conventional name for a fixed signature at the start of a file). Without it, the `module` command will not treat the file as valid.
+The directory name (`mytool`) becomes the module name and the filename (`1.0`) becomes the version. The first line `#%Module` must be present and must be exactly this. It is a marker that identifies the file as a modulefile (the modulefile documentation calls it the "magic cookie," which is just a conventional name for a fixed signature at the start of a file). Without it, the `module` command will not treat the file as valid.
 
 **Step 4: use it like any other module.**
 
@@ -421,7 +405,7 @@ With this layout you can hold `mytool/1.0` and `mytool/2.0` at once and switch b
 - **Dependencies between your own modules.** A modulefile can pull in others. Adding a `module load gcc/<version>` line inside your modulefile makes the right compiler runtime load alongside your software.
 - **Setting a default version.** Create a `.version` file in the tool's directory naming the default, so `module load mytool` (no version) picks the one you intend.
 
-> The Tcl syntax above (`prepend-path`, `module-whatis`, the `#%Module1.0` marker line) is standard for Environment Modules. Confirm the preferred modulefile location and any site-specific naming convention on your cluster before presenting, since some sites expect a particular path or layout.
+> The Tcl syntax above (`prepend-path`, `module-whatis`, the `#%Module` marker line) is standard for Environment Modules. Confirm the preferred modulefile location and any site-specific naming convention on your cluster before presenting, since some sites expect a particular path or layout.
 
 
 ![Source Build](images/source_build_pipeline.png)
@@ -482,14 +466,15 @@ sudo apptainer build example.sif example.def
 Then copy the image to the cluster and run it there:
 
 ```bash
-scp example.sif <user>@<cluster>:/path/in/your/space/
+scp example.sif <user>@xfer.discovery.neu.edu:/path/in/your/space/
+
 # then on the cluster:
 apptainer exec example.sif python3 my_script.py
 ```
 
 This keeps the privileged build step on a machine you control and leaves only the unprivileged `run`/`exec` on the cluster, which needs no special permissions.
 
-> If you cannot build locally, ask the Research Computing team about supported alternatives. Some sites offer a remote build service or a restricted fakeroot workflow, but availability varies, so confirm before relying on it.
+> If you cannot build locally, ask the Research Computing team about supported alternatives.
 
 ### 7.4 When Containers Are the Right Choice
 
