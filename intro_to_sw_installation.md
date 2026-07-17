@@ -484,13 +484,13 @@ On your local machine, build it:
 
 ```bash
 # run locally, where you have root
-sudo apptainer build example.sif example.def
+apptainer build example.sif example.def
 ```
 
 Then copy the image to the cluster and run it there:
 
 ```bash
-scp example.sif <user>@xfer.discovery.neu.edu:/path/in/your/space/
+scp example.sif <UserID>@xfer.discovery.neu.edu:/path/in/your/space/
 
 # then on the cluster:
 apptainer exec example.sif python3 my_script.py
