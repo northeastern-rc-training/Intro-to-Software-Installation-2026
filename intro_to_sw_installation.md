@@ -295,7 +295,7 @@ You can put these three in an EasyBuild config file so you do not retype them ev
 [config]
 modules-tool = EnvironmentModules
 module-syntax = Tcl
-installpath = /home/$USER/easybuild
+installpath = /home/<UserID>/easybuild
 ```
 
 After the build finishes, point `module` at EasyBuild's modulefile directory and load the result:
