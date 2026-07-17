@@ -89,8 +89,6 @@ module unload python/3.13.5 # remove it
 module purge                # clear everything
 ```
 
-> If you have used Lmod on other clusters, note that `module spider` does not exist here. Use `module avail <name>` to search by name and `module show <name>` to inspect what a module does.
-
 ### Why this matters before you install anything
 
 The fastest install is the one you do not have to do. If `module avail` shows what you need, use it. If you need a compiler or MPI to build something yourself (Sections 4 to 6), you load those as modules first so your build links against the cluster's optimized libraries.
@@ -144,14 +142,41 @@ srun --partition=short --cpus-per-task=4 --mem=8G --pty bash
 **Watch your home quota.** Conda environments are tens of thousands of small files and can fill a home quota quickly. Be deliberate about where environments live. Do not put them on scratch: scratch is periodically purged, so environments stored there will disappear, sometimes mid-project. Keep environments in persistent space (home, or a project/work directory with enough quota). The package cache, which is regenerable, is the one piece you can safely redirect to scratch to save quota:
 
 ```bash
-# in ~/.conda, redirect only the regenerable package cache
+# in ~/.condarc, redirect only the regenerable package cache
 pkgs_dirs:
   - /scratch/$USER/conda/pkgs
 ```
 
 If home quota is tight, create environments in a persistent project directory with `conda create -p /projects/proj_name/envs/myenv` rather than relocating all environments to scratch.
 
-**Activate inside your job script, not your `.bashrc`.** Auto-activating an environment in `.bashrc` slows every login and can break batch jobs. Activate explicitly in the job:
+Alternatively, you may regularly empty the pkgs directory:
+```bash
+rm -rf ~/.conda/pkgs
+```
+
+**Activate inside your job script, not your `.bashrc`.** Auto-activating an environment in `.bashrc` slows every login and can break batch jobs. 
+
+Commenting out or removing conda generated lines is recommended:
+```bash
+Inside .bashrc:
+
+# >>> conda initialize >>>
+# !! Contents within this block are managed by 'conda init' !!
+#__conda_setup="$('/opt/conda/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+#if [ $? -eq 0 ]; then
+#    eval "$__conda_setup"
+#else
+#    if [ -f "/opt/conda/etc/profile.d/conda.sh" ]; then
+#        . "/opt/conda/etc/profile.d/conda.sh"
+#    else
+#        export PATH="/opt/conda/bin:$PATH"
+#    fi
+#fi
+#unset __conda_setup
+# <<< conda initialize <<<
+```
+
+Activate explicitly in the job:
 
 ```bash
 #SBATCH -N 1
@@ -290,7 +315,6 @@ Both build from source and both produce optimized, reproducible installs. The pr
 |---|---|---|
 | How you install | `spack install <spec>` from the command line | `eb <name>.eb` from the command line |
 | Dependency handling | Resolves a flexible dependency graph | Follows a fixed toolchain |
-| Typical user | Power users and admins | Primarily admins, for the central stack |
 | Output | `spack load`, or a module | An environment modulefile |
 | Strength | Flexible variants and versions | Strict, repeatable, toolchain-based builds |
 
