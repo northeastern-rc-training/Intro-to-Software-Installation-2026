@@ -12,7 +12,7 @@ HPC Performance Engineer
 
 ## Installing Software on an HPC Cluster
 
-Welcome to the [Research Computing Spring 2026 Training Series](https://rc.northeastern.edu/research-computing-spring-training/)!
+Welcome to the [Research Computing Summer 2026 Training Series](https://rc.northeastern.edu/training/research-computing-summer-training/)!
 
 During this session, we will walk through the main ways to get research software running on a shared cluster, from grabbing a prebuilt package to compiling from source. We will cover when to reach for each tool, the pitfalls that trip people up on a shared system, and working examples you can run yourself.
 
